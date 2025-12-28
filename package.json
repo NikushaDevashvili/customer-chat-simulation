@@ -3,13 +3,18 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3002",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -p 3002",
     "lint": "eslint"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^3.0.1",
+    "@ai-sdk/react": "^3.0.3",
+    "ai": "^6.0.3",
     "next": "16.1.1",
+    "observa-sdk": "^0.0.1",
+    "openai": "^6.15.0",
     "react": "19.2.3",
     "react-dom": "19.2.3"
   },
@@ -22,5 +27,13 @@
     "eslint-config-next": "16.1.1",
     "tailwindcss": "^4",
     "typescript": "^5"
-  }
+  },
+  "description": "This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
 }

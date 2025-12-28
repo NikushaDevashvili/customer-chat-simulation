@@ -1,65 +1,112 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import React, { useState } from "react";
+import { useChat } from "@ai-sdk/react";
+import { TextStreamChatTransport } from "ai";
+import type { UIMessage } from "ai";
+
+export default function Page(): React.JSX.Element {
+  const [input, setInput] = useState("");
+  const { messages, sendMessage, status, error } = useChat({
+    transport: new TextStreamChatTransport({
+      api: "/api/chat",
+    }),
+    onError: (error) => {
+      console.error("Chat error:", error);
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (input.trim() && status !== "streaming") {
+      sendMessage({ text: input });
+      setInput("");
+    }
+  };
+
+  const isLoading = status === "submitted" || status === "streaming";
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <main className="min-h-screen flex flex-col items-center bg-black text-white p-6">
+      <div className="w-full max-w-2xl flex flex-col border border-neutral-800 rounded-lg p-4">
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-xl font-semibold">
+            Airlines Customer Chat (Box A)
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+          {status && (
+            <div className="text-xs text-neutral-500">
+              Status: <span className="text-emerald-400">{status}</span>
+            </div>
+          )}
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        <div className="flex-1 overflow-y-auto border border-neutral-800 rounded-md p-3 mb-4 space-y-2">
+          {error && (
+            <div className="p-3 rounded-md bg-red-900/20 border border-red-800 text-red-400 text-sm">
+              <div className="font-semibold mb-1">Error</div>
+              <div>
+                {error.message ||
+                  "An error occurred. Please check your OpenAI API key and billing status."}
+              </div>
+              {error.message?.includes("quota") && (
+                <div className="mt-2 text-xs">
+                  Check your OpenAI billing at{" "}
+                  <a
+                    href="https://platform.openai.com/account/billing"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline"
+                  >
+                    platform.openai.com/account/billing
+                  </a>
+                </div>
+              )}
+            </div>
+          )}
+          {messages.map((m: UIMessage) => {
+            const role = m.role;
+            const content = m.parts
+              .filter((part) => part.type === "text")
+              .map((part) => (part as { text: string }).text)
+              .join("");
+
+            return (
+              <div
+                key={m.id}
+                className={`p-2 rounded ${
+                  role === "user" ? "bg-neutral-800" : "bg-neutral-900"
+                }`}
+              >
+                <div className="text-xs text-neutral-400 mb-1">
+                  {role === "user" ? "User" : "AI"}
+                </div>
+                <div>{content}</div>
+              </div>
+            );
+          })}
+          {messages.length === 0 && !error && (
+            <div className="text-neutral-500 text-sm">
+              Start typing below to talk to the model.
+            </div>
+          )}
         </div>
-      </main>
-    </div>
+
+        <form onSubmit={handleSubmit} className="flex gap-2">
+          <input
+            className="flex-1 rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Ask something..."
+          />
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="px-4 py-2 rounded-md bg-emerald-500 text-black text-sm disabled:opacity-50"
+          >
+            {isLoading ? "Thinking..." : "Send"}
+          </button>
+        </form>
+      </div>
+    </main>
   );
 }
