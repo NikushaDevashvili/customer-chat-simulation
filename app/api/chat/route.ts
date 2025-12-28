@@ -8,11 +8,13 @@ export const maxDuration = 30;
 // Initialize Observa SDK
 // JWT API key automatically encodes tenantId/projectId - no need to specify!
 // Get your API key from: http://localhost:3001 (observa-app signup)
+const observaApiUrl = process.env.OBSERVA_API_URL || (process.env.NODE_ENV === "production" ? "https://observa-api.vercel.app" : "http://localhost:3000");
+console.log(`[Customer Chat] Initializing Observa SDK with API URL: ${observaApiUrl}`);
 const observa = init({
   apiKey: process.env.OBSERVA_API_KEY || "",
   // JWT API key automatically encodes tenantId/projectId - no need to specify!
   // Default to production URL if not set (SDK will use https://api.observa.ai if apiUrl is undefined)
-  apiUrl: process.env.OBSERVA_API_URL || (process.env.NODE_ENV === "production" ? "https://observa-api.vercel.app" : "http://localhost:3000"),
+  apiUrl: observaApiUrl,
   environment: (process.env.OBSERVA_ENV ||
     (process.env.NODE_ENV === "production" ? "prod" : "dev")) as "dev" | "prod",
   mode: (process.env.OBSERVA_MODE ||
