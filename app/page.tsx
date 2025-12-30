@@ -64,6 +64,16 @@ export default function Page(): React.JSX.Element {
     }
   }, []);
 
+  // Atomic message index counter using ref to prevent race conditions
+  // This ensures each message gets a unique index even when sent rapidly
+  const messageIndexRef = React.useRef<number>(0);
+  
+  // Initialize ref from localStorage on mount (client-side only)
+  useEffect(() => {
+    const savedIndex = parseInt(localStorage.getItem("observa_message_index") || "0", 10);
+    messageIndexRef.current = savedIndex;
+  }, []);
+
   // Create custom transport that includes conversation tracking data
   // Memoize to recreate when conversation data changes
   const customTransport = useMemo(() => {
@@ -81,7 +91,12 @@ export default function Page(): React.JSX.Element {
           const currentConversationId = localStorage.getItem("observa_conversation_id") || conversationId || null;
           const currentSessionId = localStorage.getItem("observa_session_id") || sessionId || null;
           const currentUserId = localStorage.getItem("observa_user_id") || userId || null;
-          const currentMessageIndex = parseInt(localStorage.getItem("observa_message_index") || "0", 10) || messageIndex || 0;
+          
+          // Use atomic counter to get and increment messageIndex
+          // This prevents race conditions when multiple messages are sent rapidly
+          const currentMessageIndex = messageIndexRef.current;
+          messageIndexRef.current = currentMessageIndex + 1;
+          localStorage.setItem("observa_message_index", messageIndexRef.current.toString());
           
           let body: any = {};
           if (options.body) {
@@ -101,13 +116,10 @@ export default function Page(): React.JSX.Element {
           body.conversationId = currentConversationId;
           body.sessionId = currentSessionId;
           body.userId = currentUserId;
-          // Increment messageIndex atomically BEFORE sending to prevent race conditions
-          // Backend will add +1, so we send the current index (backend handles the +1)
-          // But we increment localStorage immediately to prevent concurrent sends from using same index
-          const nextMessageIndex = currentMessageIndex + 1;
-          body.messageIndex = currentMessageIndex; // Send current index, backend adds +1
-          // Update localStorage immediately to prevent race conditions
-          localStorage.setItem("observa_message_index", nextMessageIndex.toString());
+          // Send current index, backend will add +1
+          body.messageIndex = currentMessageIndex;
+          
+          console.log(`[Customer Chat] Sending message with index ${currentMessageIndex} (next will be ${messageIndexRef.current})`);
           
           // Debug logging
           console.log("[Customer Chat] Sending request:");
@@ -115,6 +127,7 @@ export default function Page(): React.JSX.Element {
           console.log("  - API Key length:", trimmedApiKey.length);
           console.log("  - API Key preview:", trimmedApiKey ? `${trimmedApiKey.substring(0, 30)}...` : "MISSING");
           console.log("  - Conversation ID:", currentConversationId);
+          console.log("  - Message Index:", currentMessageIndex);
           
           if (!trimmedApiKey) {
             console.error("[Customer Chat] ERROR: API key is missing or empty!");
@@ -138,9 +151,8 @@ export default function Page(): React.JSX.Element {
     },
     onFinish: () => {
       // Message index was already incremented before sending (in fetch function)
-      // Just sync state with localStorage to keep UI in sync
-      const savedIndex = parseInt(localStorage.getItem("observa_message_index") || "0", 10);
-      setMessageIndex(savedIndex);
+      // Sync state with the ref to keep UI in sync
+      setMessageIndex(messageIndexRef.current);
     },
   });
 
