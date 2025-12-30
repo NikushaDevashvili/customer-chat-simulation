@@ -45,3 +45,4 @@ The package.json has been updated to use the published SDK. If the SDK is not ye
 - `OBSERVA_API_URL` - Production observa-api URL (required)
 - `OPENAI_API_KEY` - OpenAI API key (required)
 
+

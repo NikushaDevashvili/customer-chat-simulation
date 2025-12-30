@@ -124,3 +124,4 @@ You should see:
 ✅ observa-api logs show trace ingestion  
 ✅ Trace appears in Tinybird with correct tenant_id  
 ✅ All trace fields are populated
+

@@ -5,23 +5,11 @@ import { init } from "observa-sdk";
 
 export const maxDuration = 30;
 
-// Initialize Observa SDK
-// JWT API key automatically encodes tenantId/projectId - no need to specify!
-// Get your API key from: http://localhost:3001 (observa-app signup)
+// Observa API URL
 const observaApiUrl = process.env.OBSERVA_API_URL || (process.env.NODE_ENV === "production" ? "https://observa-api.vercel.app" : "http://localhost:3000");
-console.log(`[Customer Chat] Initializing Observa SDK with API URL: ${observaApiUrl}`);
-const observa = init({
-  apiKey: process.env.OBSERVA_API_KEY || "",
-  // JWT API key automatically encodes tenantId/projectId - no need to specify!
-  // Default to production URL if not set (SDK will use https://api.observa.ai if apiUrl is undefined)
-  apiUrl: observaApiUrl,
-  environment: (process.env.OBSERVA_ENV ||
-    (process.env.NODE_ENV === "production" ? "prod" : "dev")) as "dev" | "prod",
-  mode: (process.env.OBSERVA_MODE ||
-    (process.env.NODE_ENV === "production" ? "production" : "development")) as
-    | "production"
-    | "development",
-});
+console.log(`[Customer Chat] Observa API URL: ${observaApiUrl}`);
+
+// Note: Observa SDK will be initialized per-request with API key from request
 
 // --- 1. THE FAKE DATABASE (Simulating RAG) ---
 async function getFakeContext(query: string) {
@@ -41,7 +29,30 @@ async function getFakeContext(query: string) {
 
 export async function POST(req: Request) {
   // 1. Unpack the box
-  const { messages } = await req.json();
+  const { 
+    messages, 
+    apiKey, 
+    conversationId, 
+    sessionId, 
+    userId, 
+    messageIndex 
+  } = await req.json();
+
+  // Validate API key
+  if (!apiKey) {
+    return new Response(
+      JSON.stringify({ error: "API key is required. Please configure it in settings." }),
+      { status: 400, headers: { "Content-Type": "application/json" } }
+    );
+  }
+
+  // Initialize Observa SDK with API key from request
+  const observa = init({
+    apiKey: apiKey,
+    apiUrl: observaApiUrl,
+    environment: (process.env.NODE_ENV === "production" ? "prod" : "dev") as "dev" | "prod",
+    mode: (process.env.NODE_ENV === "production" ? "production" : "development") as "production" | "development",
+  });
 
   // 2. Get the user's last message to search our "database"
   const lastUserMessage = messages[messages.length - 1];
@@ -73,12 +84,19 @@ export async function POST(req: Request) {
 
   // 6. Cook the meal (Ask OpenAI) now its wrapped inside our tracking SDK
   console.log("📊 [OBSERVA] Tracking query with Observa SDK...");
+  console.log(`📊 [OBSERVA] Conversation: ${conversationId}, Message: ${messageIndex}`);
+  
   try {
     const response = await observa.track(
       {
         query: userQuery,
         context: context,
         model: "gpt-4o-mini",
+        // Conversation tracking fields
+        conversationId: conversationId || undefined,
+        sessionId: sessionId || undefined,
+        userId: userId || undefined,
+        messageIndex: messageIndex !== undefined ? messageIndex + 1 : undefined, // +1 because we're about to send
         metadata: {
           // Add any additional metadata you want to track
           messageCount: messages.length,
@@ -94,7 +112,7 @@ export async function POST(req: Request) {
       }
     );
     console.log(
-      "✅ [OBSERVA] Tracking complete - data should be sent to Tinybird"
+      "✅ [OBSERVA] Tracking complete - data sent to Observa with conversation tracking"
     );
     return response;
   } catch (error) {
