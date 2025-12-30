@@ -97,8 +97,11 @@ export async function POST(req: Request) {
   // 6. Cook the meal (Ask OpenAI) now its wrapped inside our tracking SDK
   console.log("📊 [OBSERVA] Tracking query with Observa SDK...");
   console.log(`📊 [OBSERVA] Conversation: ${conversationId}, Message: ${messageIndex}`);
+  console.log(`📊 [OBSERVA] SDK initialized - API URL: ${observaApiUrl}`);
+  console.log(`📊 [OBSERVA] User query: ${userQuery.substring(0, 100)}...`);
   
   try {
+    console.log("📊 [OBSERVA] Calling observa.track()...");
     const response = await observa.track(
       {
         query: userQuery,
