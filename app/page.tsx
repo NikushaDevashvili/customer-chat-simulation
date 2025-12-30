@@ -101,7 +101,13 @@ export default function Page(): React.JSX.Element {
           body.conversationId = currentConversationId;
           body.sessionId = currentSessionId;
           body.userId = currentUserId;
-          body.messageIndex = currentMessageIndex;
+          // Increment messageIndex atomically BEFORE sending to prevent race conditions
+          // Backend will add +1, so we send the current index (backend handles the +1)
+          // But we increment localStorage immediately to prevent concurrent sends from using same index
+          const nextMessageIndex = currentMessageIndex + 1;
+          body.messageIndex = currentMessageIndex; // Send current index, backend adds +1
+          // Update localStorage immediately to prevent race conditions
+          localStorage.setItem("observa_message_index", nextMessageIndex.toString());
           
           // Debug logging
           console.log("[Customer Chat] Sending request:");
@@ -131,10 +137,10 @@ export default function Page(): React.JSX.Element {
       console.error("Chat error:", error);
     },
     onFinish: () => {
-      // Increment message index after each message
-      const newIndex = messageIndex + 1;
-      setMessageIndex(newIndex);
-      localStorage.setItem("observa_message_index", newIndex.toString());
+      // Message index was already incremented before sending (in fetch function)
+      // Just sync state with localStorage to keep UI in sync
+      const savedIndex = parseInt(localStorage.getItem("observa_message_index") || "0", 10);
+      setMessageIndex(savedIndex);
     },
   });
 
