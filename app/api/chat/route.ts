@@ -29,6 +29,7 @@ async function getFakeContext(query: string) {
 
 export async function POST(req: Request) {
   // 1. Unpack the box
+  const body = await req.json();
   const { 
     messages, 
     apiKey, 
@@ -36,10 +37,21 @@ export async function POST(req: Request) {
     sessionId, 
     userId, 
     messageIndex 
-  } = await req.json();
+  } = body;
+
+  // Debug logging
+  console.log("[Customer Chat API] Received request:");
+  console.log("  - API Key present:", !!apiKey);
+  console.log("  - API Key length:", apiKey?.length || 0);
+  console.log("  - API Key preview:", apiKey ? `${apiKey.substring(0, 30)}...` : "MISSING");
+  console.log("  - Conversation ID:", conversationId);
+  console.log("  - Full body keys:", Object.keys(body));
 
   // Validate API key
-  if (!apiKey) {
+  if (!apiKey || typeof apiKey !== "string" || !apiKey.trim()) {
+    console.error("[Customer Chat API] ERROR: API key validation failed");
+    console.error("  - apiKey value:", apiKey);
+    console.error("  - apiKey type:", typeof apiKey);
     return new Response(
       JSON.stringify({ error: "API key is required. Please configure it in settings." }),
       { status: 400, headers: { "Content-Type": "application/json" } }

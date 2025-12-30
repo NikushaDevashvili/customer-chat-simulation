@@ -76,6 +76,13 @@ export default function Page(): React.JSX.Element {
         }
         
         try {
+          // Read API key directly from localStorage to ensure we have the latest value
+          const currentApiKey = localStorage.getItem("observa_api_key") || apiKey || "";
+          const currentConversationId = localStorage.getItem("observa_conversation_id") || conversationId || null;
+          const currentSessionId = localStorage.getItem("observa_session_id") || sessionId || null;
+          const currentUserId = localStorage.getItem("observa_user_id") || userId || null;
+          const currentMessageIndex = parseInt(localStorage.getItem("observa_message_index") || "0", 10) || messageIndex || 0;
+          
           let body: any = {};
           if (options.body) {
             try {
@@ -86,12 +93,28 @@ export default function Page(): React.JSX.Element {
             }
           }
           
-          // Always include API key and conversation tracking
-          body.apiKey = apiKey || "";
-          body.conversationId = conversationId || null;
-          body.sessionId = sessionId || null;
-          body.userId = userId || null;
-          body.messageIndex = messageIndex || 0;
+          // Always include API key and conversation tracking (read from localStorage for reliability)
+          // Ensure API key is not empty - if it is, log error but still send (backend will reject with clear error)
+          const trimmedApiKey = currentApiKey ? currentApiKey.trim() : "";
+          
+          body.apiKey = trimmedApiKey;
+          body.conversationId = currentConversationId;
+          body.sessionId = currentSessionId;
+          body.userId = currentUserId;
+          body.messageIndex = currentMessageIndex;
+          
+          // Debug logging
+          console.log("[Customer Chat] Sending request:");
+          console.log("  - API Key present:", !!trimmedApiKey);
+          console.log("  - API Key length:", trimmedApiKey.length);
+          console.log("  - API Key preview:", trimmedApiKey ? `${trimmedApiKey.substring(0, 30)}...` : "MISSING");
+          console.log("  - Conversation ID:", currentConversationId);
+          
+          if (!trimmedApiKey) {
+            console.error("[Customer Chat] ERROR: API key is missing or empty!");
+            console.error("  - localStorage value:", localStorage.getItem("observa_api_key"));
+            console.error("  - State value:", apiKey);
+          }
           
           options.body = JSON.stringify(body);
         } catch (e) {
@@ -131,12 +154,28 @@ export default function Page(): React.JSX.Element {
   };
 
   const handleApiKeySave = () => {
-    if (!apiKeyInput.trim()) {
+    const trimmedKey = apiKeyInput.trim();
+    if (!trimmedKey) {
       alert("Please enter an API key");
       return;
     }
-    localStorage.setItem("observa_api_key", apiKeyInput.trim());
-    setApiKey(apiKeyInput.trim());
+    
+    // Save to localStorage first
+    localStorage.setItem("observa_api_key", trimmedKey);
+    
+    // Update state
+    setApiKey(trimmedKey);
+    
+    // Verify it was saved
+    const saved = localStorage.getItem("observa_api_key");
+    if (saved !== trimmedKey) {
+      console.error("[Customer Chat] WARNING: API key may not have saved correctly!");
+      console.error("  - Expected:", trimmedKey.substring(0, 20) + "...");
+      console.error("  - Got:", saved ? saved.substring(0, 20) + "..." : "null");
+    } else {
+      console.log("[Customer Chat] API key saved successfully:", trimmedKey.substring(0, 20) + "...");
+    }
+    
     setShowSettings(false);
   };
 
