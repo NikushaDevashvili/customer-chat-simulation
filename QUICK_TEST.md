@@ -125,3 +125,7 @@ You should see:
 ✅ Trace appears in Tinybird with correct tenant_id  
 ✅ All trace fields are populated
 
+
+
+
+

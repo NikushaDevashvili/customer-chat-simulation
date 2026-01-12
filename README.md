@@ -1,24 +1,42 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Customer Chat Application
 
-## Getting Started
+A Next.js-based customer chat application with AI-powered responses using the Vercel AI SDK and OpenAI.
 
-First, run the development server:
+## Quick Start
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+1. **Install dependencies**
+   ```bash
+   npm install
+   ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. **Set up environment variables**
+   
+   Create a `.env.local` file:
+   ```env
+   OPENAI_API_KEY=your-openai-api-key
+   ```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. **Run the development server**
+   ```bash
+   npm run dev
+   ```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+4. **Open your browser**
+   
+   Navigate to [http://localhost:3002](http://localhost:3002)
+
+## Documentation
+
+- **[GET_STARTED.md](./GET_STARTED.md)** - Step-by-step guide to get started with tracing
+- **[SETUP.md](./SETUP.md)** - Detailed setup and configuration instructions
+
+## Features
+
+- 🤖 AI-powered chat using OpenAI GPT-4o-mini
+- 💬 Real-time streaming responses
+- 🔍 Simulated RAG (Retrieval Augmented Generation) context retrieval
+- 📊 Observability and tracing support
+- ⚡ Built with Next.js 16 and React 19
 
 ## Learn More
 

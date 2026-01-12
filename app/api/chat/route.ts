@@ -1,15 +1,8 @@
 import { openai } from "@ai-sdk/openai";
 import { streamText, convertToModelMessages } from "ai";
 import type { UIMessage } from "ai";
-import { init } from "observa-sdk";
 
 export const maxDuration = 30;
-
-// Observa API URL
-const observaApiUrl = process.env.OBSERVA_API_URL || (process.env.NODE_ENV === "production" ? "https://observa-api.vercel.app" : "http://localhost:3000");
-console.log(`[Customer Chat] Observa API URL: ${observaApiUrl}`);
-
-// Note: Observa SDK will be initialized per-request with API key from request
 
 // --- 1. THE FAKE DATABASE (Simulating RAG) ---
 async function getFakeContext(query: string) {
@@ -28,43 +21,8 @@ async function getFakeContext(query: string) {
 }
 
 export async function POST(req: Request) {
-  // 1. Unpack the box
-  const body = await req.json();
-  const { 
-    messages, 
-    apiKey, 
-    conversationId, 
-    sessionId, 
-    userId, 
-    messageIndex 
-  } = body;
-
-  // Debug logging
-  console.log("[Customer Chat API] Received request:");
-  console.log("  - API Key present:", !!apiKey);
-  console.log("  - API Key length:", apiKey?.length || 0);
-  console.log("  - API Key preview:", apiKey ? `${apiKey.substring(0, 30)}...` : "MISSING");
-  console.log("  - Conversation ID:", conversationId);
-  console.log("  - Full body keys:", Object.keys(body));
-
-  // Validate API key
-  if (!apiKey || typeof apiKey !== "string" || !apiKey.trim()) {
-    console.error("[Customer Chat API] ERROR: API key validation failed");
-    console.error("  - apiKey value:", apiKey);
-    console.error("  - apiKey type:", typeof apiKey);
-    return new Response(
-      JSON.stringify({ error: "API key is required. Please configure it in settings." }),
-      { status: 400, headers: { "Content-Type": "application/json" } }
-    );
-  }
-
-  // Initialize Observa SDK with API key from request
-  const observa = init({
-    apiKey: apiKey,
-    apiUrl: observaApiUrl,
-    environment: (process.env.NODE_ENV === "production" ? "prod" : "dev") as "dev" | "prod",
-    mode: (process.env.NODE_ENV === "production" ? "production" : "development") as "production" | "development",
-  });
+  // 1. Unpack the request
+  const { messages } = await req.json();
 
   // 2. Get the user's last message to search our "database"
   const lastUserMessage = messages[messages.length - 1];
@@ -94,49 +52,11 @@ export async function POST(req: Request) {
     ...modelMessages,
   ];
 
-  // 6. Cook the meal (Ask OpenAI) now its wrapped inside our tracking SDK
-  console.log("📊 [OBSERVA] Tracking query with Observa SDK...");
-  console.log(`📊 [OBSERVA] Conversation: ${conversationId}, Message: ${messageIndex}`);
-  console.log(`📊 [OBSERVA] SDK initialized - API URL: ${observaApiUrl}`);
-  console.log(`📊 [OBSERVA] User query: ${userQuery.substring(0, 100)}...`);
-  
-  try {
-    console.log("📊 [OBSERVA] Calling observa.track()...");
-    const response = await observa.track(
-      {
-        query: userQuery,
-        context: context,
-        model: "gpt-4o-mini",
-        // Conversation tracking fields
-        conversationId: conversationId || undefined,
-        sessionId: sessionId || undefined,
-        userId: userId || undefined,
-        messageIndex: messageIndex !== undefined ? messageIndex + 1 : undefined, // +1 because we're about to send
-        metadata: {
-          // Add any additional metadata you want to track
-          messageCount: messages.length,
-        },
-      },
-      async () => {
-        // The action should return a Response object
-        const result = await streamText({
-          model: openai("gpt-4o-mini"),
-          messages: messagesWithContext as any,
-        });
-        return result.toTextStreamResponse();
-      }
-    );
-    console.log(
-      "✅ [OBSERVA] Tracking complete - data sent to Observa with conversation tracking"
-    );
-    return response;
-  } catch (error) {
-    console.error("❌ [OBSERVA] Error during tracking:", error);
-    // Still return the response even if tracking fails
-    const result = await streamText({
-      model: openai("gpt-4o-mini"),
-      messages: messagesWithContext as any,
-    });
-    return result.toTextStreamResponse();
-  }
+  // 6. Generate AI response
+  const result = await streamText({
+    model: openai("gpt-4o-mini"),
+    messages: messagesWithContext as any,
+  });
+
+  return result.toTextStreamResponse();
 }
